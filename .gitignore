@@ -1,2 +1,5 @@
 html
 nominatim/nominatim-data
+
+# Local Netlify folder
+.netlify
