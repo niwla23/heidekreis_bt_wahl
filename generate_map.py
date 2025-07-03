@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.colors import Normalize, to_hex
 
-def create_color_ramp(vmin, vmax, cmap_name='plasma'):
+def create_color_ramp(vmin, vmax, cmap_name):
     norm = Normalize(vmin, vmax)
-    cmap = cm.get_cmap(cmap_name)
+    cmap = plt.colormaps[cmap_name]
 
     def get_color(value):
         value_clamped = max(min(value, vmax), vmin)
@@ -82,7 +82,14 @@ def highlight_streets(m, streets, color, partei, wahlergebniss):
         # Add the street geometry if available
         if street and 'geojson' in street:
             row = street["row"]
-            tooltip = f"{row['wahlbezirk_name']}<br>{row['strasse']}, {row['ort']}<br>{wahlergebniss[partei]:.2%} % {partei}"
+            tooltip = f"""{row['wahlbezirk_name']}<br>{row['strasse']}, {row['ort']}<br>
+            {wahlergebniss[partei]/wahlergebniss["waehler"]:.2%} % {partei} ({wahlergebniss[partei]} / {wahlergebniss['waehler']} / {wahlergebniss["wahlberechtigte"]})
+            """
+
+            if partei == "wahlbeteiligung":
+                tooltip = f"""{row['wahlbezirk_name']}<br>{row['strasse']}, {row['ort']}<br>
+                {wahlergebniss["wahlbeteiligung"]:.2%} % Wahlbeteiligung ({wahlergebniss['waehler']} / {wahlergebniss["wahlberechtigte"]})
+                """
 
             folium.GeoJson(
                 street['geojson'],
@@ -130,18 +137,19 @@ def get_wahlergebniss_by_wahlbezirk_nr(ags: int, nr: int):
                 return {
                     "wahlberechtigte": int(row["A1"]),
                     "waehler": waehler,
-                    "spd": int(row["F1"]) / waehler,
-                    "cdu": int(row["F2"]) / waehler,
-                    "gruene": int(row["F3"]) / waehler,
-                    "fdp": int(row["F4"]) / waehler,
-                    "afd": int(row["F5"]) / waehler,
-                    "linke": int(row["F6"]) / waehler,
-                    "mensch_umwelt_tierschut": int(row["F7"]) / waehler,
-                    "basisdemokratische_partei_deutschland": int(row["F8"]) / waehler,
-                    "freie_waheler": int(row["F10"]) / waehler,
-                    "piratenpartei": int(row["F11"]) / waehler,
-                    "volt": int(row["F12"]) / waehler,
-                    "bsw": int(row["F16"]) / waehler,
+                    "wahlbeteiligung": waehler / int(row["A1"]),
+                    "spd": int(row["F1"]),
+                    "cdu": int(row["F2"]),
+                    "gruene": int(row["F3"]),
+                    "fdp": int(row["F4"]),
+                    "afd": int(row["F5"]),
+                    "linke": int(row["F6"]),
+                    "mensch_umwelt_tierschut": int(row["F7"]),
+                    "basisdemokratische_partei_deutschland": int(row["F8"]),
+                    "freie_waheler": int(row["F10"]),
+                    "piratenpartei": int(row["F11"]),
+                    "volt": int(row["F12"]),
+                    "bsw": int(row["F16"]),
                     "row": row
                 }
 
@@ -186,6 +194,7 @@ bezirke = get_all_bezirke()
 # bezirke = [101]
 
 parteien = [
+    "wahlbeteiligung",
     "spd",
     "cdu",
     "gruene",
@@ -198,27 +207,33 @@ parteien = [
     "piratenpartei",
     "volt",
     "bsw"
-]
+    ]
 
 for partei in parteien:
     print("proecssing", partei)
     fg = folium.FeatureGroup(name=partei, show=(partei == "linke"), overlay=False).add_to(map)
 
-    wahlergebnisse = [get_wahlergebniss_by_wahlbezirk_nr(*b)[partei] for b in bezirke]
-    color_fn = create_color_ramp(min(wahlergebnisse), max(wahlergebnisse), cmap_name='pink')
+    wahlergebnisse_relativ = []
+    for b in bezirke:
+        wahlergebniss = get_wahlergebniss_by_wahlbezirk_nr(*b)
+        if partei == "wahlbeteiligung":
+            wahlergebnisse_relativ.append(wahlergebniss["wahlbeteiligung"])
+        else:
+            wahlergebnisse_relativ.append(wahlergebniss[partei]/ wahlergebniss["waehler"])
+
+    color_fn = create_color_ramp(min(wahlergebnisse_relativ), max(wahlergebnisse_relativ), cmap_name='pink')
 
     for bezirk in bezirke:
         wahlergebniss = get_wahlergebniss_by_wahlbezirk_nr(*bezirk)
-
-        # color = "green" if wahlergebniss["linke"] > 0.08 else "black"
-        # color = random.choice(colors)
-        color = color_fn(wahlergebniss[partei])
+        color = color_fn(wahlergebniss[partei]/wahlergebniss["waehler"])
+        if partei == "wahlbeteiligung": color = color_fn(wahlergebniss["wahlbeteiligung"])
         name = wahlergebniss["row"]["gebiet-name"]
 
         highlight_streets(fg, get_streets_by_wahlbezirk_nr(*bezirk), color, partei, wahlergebniss)
 
 folium.LayerControl().add_to(map)
 print("creating file")
+
 map.save("html/index.html")
 
 # if map_obj:
