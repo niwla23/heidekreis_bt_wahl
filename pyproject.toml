@@ -1,0 +1,18 @@
+[project]
+name = "heidekreis-bt-wahl"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "niwla23",email = "46248939+niwla23@users.noreply.github.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "folium (>=0.20.0,<0.21.0)",
+    "matplotlib (>=3.10.3,<4.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
