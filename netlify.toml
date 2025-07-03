@@ -1,6 +1,6 @@
 # example netlify.toml
 [build]
-  command = "python3 test.py"
+  command = "poetry install && python3 test.py"
   functions = "netlify/functions"
   publish = "html"
 
