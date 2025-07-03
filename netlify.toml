@@ -1,6 +1,10 @@
 # example netlify.toml
 [build]
-  command = "poetry install && python3 test.py"
+  command = """
+  pip3 install -q poetry &&
+  poetry install &&
+  python3 test.py
+  """
   functions = "netlify/functions"
   publish = "html"
 
